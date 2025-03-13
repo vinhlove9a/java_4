@@ -15,171 +15,141 @@ import java.util.List;
         "/giang-vien/remove",
         "/giang-vien/view-update",
         "/giang-vien/tim-kiem",
-        "/giang-vien/add",
-})
+        "/giang-vien/add"})
 public class GiangVienServlet extends HttpServlet {
-    GiangVienRepository giangVienRepo = new GiangVienRepository();
+    private final GiangVienRepository giangVienRepo = new GiangVienRepository();
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         String uri = request.getRequestURI();
-
-        // Lấy danh sách giảng viên
-        List<GiangVien> danhSachGiangVien = giangVienRepo.getAll();
-        request.setAttribute("danhSachGiangVien", danhSachGiangVien);
-
-        if (uri.equals("/giang-vien/hien-thi-tat-ca")) {
-            request.getRequestDispatcher("/giang-vien.jsp").forward(request, response);
-
-        } else if (uri.equals("/giang-vien/detail")) {
-            String idParam = request.getParameter("id");
-            if (idParam != null) {
-                try {
-                    Long id = Long.parseLong(idParam);
-                    GiangVien gv = giangVienRepo.getOne(id);
-                    if (gv != null) {
-                        request.setAttribute("giangVien", gv);
-                    }
-                } catch (NumberFormatException e) {
-                    request.setAttribute("error", "ID không hợp lệ");
-                }
-            }
-            request.getRequestDispatcher("/giang-vien.jsp").forward(request, response);
-        } else if (uri.equals("/giang-vien/remove")) {
-            String idParam = request.getParameter("id");
-            if (idParam != null) {
-                try {
-                    Long id = Long.parseLong(idParam);
-                    giangVienRepo.delete(id);
-                } catch (NumberFormatException e) {
-                    request.setAttribute("error", "ID không hợp lệ");
-                }
-            }
-            response.sendRedirect("/giang-vien/hien-thi-tat-ca");
-            return;
-        } else if (uri.equals("/giang-vien/view-update")) {
-            Long id = Long.parseLong(request.getParameter("id"));
-            GiangVien gv = giangVienRepo.getOne(id);
-            request.setAttribute("giangVien", gv);
-            request.getRequestDispatcher("/update-giang-vien.jsp").forward(request, response);
-        } else if (uri.equals("/giang-vien/tim-kiem")) {
-            String ten = request.getParameter("ten");
-            String tuoiMinParam = request.getParameter("tuoiMin");
-            String tuoiMaxParam = request.getParameter("tuoiMax");
-
-            Long tuoiMin = (tuoiMinParam != null && !tuoiMinParam.isEmpty()) ? Long.parseLong(tuoiMinParam) : null;
-            Long tuoiMax = (tuoiMaxParam != null && !tuoiMaxParam.isEmpty()) ? Long.parseLong(tuoiMaxParam) : null;
-
-            // 🔹 Gọi Repository để tìm kiếm
-            List<GiangVien> dsGiangVien = giangVienRepo.search(ten, tuoiMin, tuoiMax);
-
-            // 🔹 Truyền dữ liệu vào request để hiển thị trên JSP
-            request.setAttribute("danhSachGiangVien", dsGiangVien);
-            request.setAttribute("isSearching", true); // Đánh dấu trạng thái tìm kiếm
+        if (uri.endsWith("/giang-vien/hien-thi-tat-ca")) {
+            hienThiTatCa(request, response);
+        } else if (uri.endsWith("/giang-vien/detail")) {
+            hienThiChiTiet(request, response);
+        } else if (uri.endsWith("/giang-vien/remove")) {
+            xoaGiangVien(request, response);
+        } else if (uri.endsWith("/giang-vien/view-update")) {
+            hienThiFormCapNhat(request, response);
+        } else if (uri.endsWith("/giang-vien/tim-kiem")) {
+            timKiemGiangVien(request, response);
         } else {
-            // 🔹 Nếu không tìm kiếm, hiển thị toàn bộ danh sách
-            List<GiangVien> dsGiangVien = giangVienRepo.getAll();
-            request.setAttribute("dsGiangVien", dsGiangVien);
-            request.setAttribute("isSearching", false); // Không phải tìm kiếm
+            hienThiTatCa(request, response);
         }
-
-        request.getRequestDispatcher("/giang-vien.jsp").forward(request, response);
     }
-
 
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         String uri = request.getRequestURI();
-
-        if (uri.equals("/giang-vien/view-update")) {
-            try {
-                // 🟢 Lấy dữ liệu từ request
-                Long id = Long.parseLong(request.getParameter("id"));
-                String hoTen = request.getParameter("ten");
-                Long tuoi = Long.parseLong(request.getParameter("tuoi"));
-                String queQuan = request.getParameter("queQuan");
-
-                // 🟢 Lấy giá trị giới tính
-                boolean gioiTinh = Boolean.parseBoolean(request.getParameter("gioiTinh"));
-
-                // 🟢 Kiểm tra giảng viên có tồn tại không
-                GiangVien gv = giangVienRepo.getOne(id);
-                if (gv == null) {
-                    request.setAttribute("error", "Không tìm thấy giảng viên!");
-                    request.getRequestDispatcher("/giang-vien/hien-thi-tat-ca").forward(request, response);
-                    return;
-                }
-
-                // 🟢 Cập nhật thông tin
-                gv.setTen(hoTen);
-                gv.setTuoi(tuoi);
-                gv.setQueQuan(queQuan);
-                gv.setGioiTinh(gioiTinh);
-
-                // 🟢 Thực hiện cập nhật
-                giangVienRepo.update(gv);
-
-                response.sendRedirect("/giang-vien/hien-thi-tat-ca");
-
-            } catch (Exception e) {
-                request.setAttribute("error", "Lỗi khi cập nhật giảng viên: " + e.getMessage());
-                request.getRequestDispatcher("/update-giang-vien.jsp").forward(request, response);
-            }
+        if (uri.endsWith("/giang-vien/add")) {
+            themGiangVien(request, response);
+        } else if (uri.endsWith("/giang-vien/view-update")) {
+            capNhatGiangVien(request, response);
         }
-        if (uri.equals("/giang-vien/add")) {
-            try {
-                // 🟢 Lấy dữ liệu từ request
-                String mssv = request.getParameter("mssv");
-                String hoTen = request.getParameter("ten");
-                String tuoiParam = request.getParameter("tuoi");
-                String queQuan = request.getParameter("queQuan");
-                String gioiTinhParam = request.getParameter("gioiTinh");
-
-                // 🛑 Kiểm tra dữ liệu nhập vào
-                if (mssv == null || mssv.trim().isEmpty() ||
-                        hoTen == null || hoTen.trim().isEmpty() ||
-                        tuoiParam == null || tuoiParam.trim().isEmpty() ||
-                        queQuan == null || queQuan.trim().isEmpty() ||
-                        gioiTinhParam == null || gioiTinhParam.trim().isEmpty()) {
-
-                    request.setAttribute("error", "Vui lòng nhập đầy đủ thông tin!");
-
-                    // 🟢 Lưu danh sách giảng viên để hiển thị lại mà không bị mất
-                    List<GiangVien> danhSachGiangVien = giangVienRepo.getAll();
-                    request.setAttribute("danhSachGiangVien", danhSachGiangVien);
-
-                    request.getRequestDispatcher("/giang-vien.jsp").forward(request, response);
-                    return;
-                }
-
-                // Chuyển đổi kiểu dữ liệu
-                Long tuoi = Long.parseLong(tuoiParam);
-                boolean gioiTinh = Boolean.parseBoolean(gioiTinhParam);
-
-                // 🟢 Tạo đối tượng GiangVien mới
-                GiangVien gv = new GiangVien();
-                gv.setMssv(mssv);
-                gv.setTen(hoTen);
-                gv.setTuoi(tuoi);
-                gv.setQueQuan(queQuan);
-                gv.setGioiTinh(gioiTinh);
-
-                // 🟢 Thêm vào database
-                giangVienRepo.add(gv);
-
-                // 🟢 Gửi thông báo thành công
-                request.getSession().setAttribute("success", "Thêm thành công");
-
-                // 🟢 Chuyển hướng về danh sách
-                response.sendRedirect("/giang-vien/hien-thi-tat-ca");
-            } catch (Exception e) {
-                // 🟢 Chỉ forward nếu lỗi xảy ra trước khi commit response
-                request.setAttribute("error", "Lỗi khi thêm giảng viên: " + e.getMessage());
-                request.getRequestDispatcher("/giang-vien.jsp").forward(request, response);
-            }
-        }
-
     }
 
+    private void hienThiTatCa(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        List<GiangVien> danhSachGiangVien = giangVienRepo.getAll();
+        request.setAttribute("danhSachGiangVien", danhSachGiangVien);
+        request.getRequestDispatcher("/giang-vien.jsp").forward(request, response);
+    }
 
+    private void hienThiChiTiet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        try {
+            Long id = Long.parseLong(request.getParameter("id"));
+            GiangVien gv = giangVienRepo.getOne(id);
+            request.setAttribute("giangVien", gv);
+            List<GiangVien> danhSachGiangVien = giangVienRepo.getAll();
+            request.setAttribute("danhSachGiangVien", danhSachGiangVien);
+        } catch (NumberFormatException e) {
+            request.setAttribute("error", "ID không hợp lệ");
+        }
+        request.getRequestDispatcher("/giang-vien.jsp").forward(request, response);
+    }
+
+    private void xoaGiangVien(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        try {
+            Long id = Long.parseLong(request.getParameter("id"));
+            giangVienRepo.delete(id);
+        } catch (NumberFormatException ignored) {
+        }
+        response.sendRedirect("/giang-vien/hien-thi-tat-ca");
+    }
+
+    private void hienThiFormCapNhat(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        Long id = Long.parseLong(request.getParameter("id"));
+        GiangVien gv = giangVienRepo.getOne(id);
+        request.setAttribute("giangVien", gv);
+        request.getRequestDispatcher("/update-giang-vien.jsp").forward(request, response);
+    }
+
+    private void timKiemGiangVien(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        String ten = request.getParameter("ten");
+        Long tuoiMin = parseLong(request.getParameter("tuoiMin"));
+        Long tuoiMax = parseLong(request.getParameter("tuoiMax"));
+
+        List<GiangVien> dsGiangVien = giangVienRepo.search(ten, tuoiMin, tuoiMax);
+        request.setAttribute("danhSachGiangVien", dsGiangVien);
+        request.setAttribute("isSearching", true);
+        request.getRequestDispatcher("/giang-vien.jsp").forward(request, response);
+    }
+
+    private void themGiangVien(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        try {
+            String mssv = request.getParameter("mssv");
+            String hoTen = request.getParameter("ten");
+            Long tuoi = parseLong(request.getParameter("tuoi"));
+            String queQuan = request.getParameter("queQuan");
+            boolean gioiTinh = Boolean.parseBoolean(request.getParameter("gioiTinh"));
+
+            if (mssv == null || mssv.trim().isEmpty() || hoTen == null || hoTen.trim().isEmpty()) {
+                request.setAttribute("error", "Vui lòng nhập đầy đủ thông tin!");
+                hienThiTatCa(request, response);
+                return;
+            }
+            GiangVien gv = new GiangVien(mssv, hoTen, tuoi, queQuan, gioiTinh);
+            giangVienRepo.add(gv);
+            request.setAttribute("success", "Thêm giảng viên thành công!");
+            hienThiTatCa(request, response);
+            response.sendRedirect("/giang-vien/hien-thi-tat-ca");
+        } catch (Exception e) {
+            request.setAttribute("error", "Lỗi khi thêm giảng viên: " + e.getMessage());
+            request.getRequestDispatcher("/giang-vien.jsp").forward(request, response);
+        }
+    }
+
+    private void capNhatGiangVien(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        try {
+            Long id = Long.parseLong(request.getParameter("id"));
+            String hoTen = request.getParameter("ten");
+            Long tuoi = parseLong(request.getParameter("tuoi"));
+            String queQuan = request.getParameter("queQuan");
+            boolean gioiTinh = Boolean.parseBoolean(request.getParameter("gioiTinh"));
+
+            GiangVien gv = giangVienRepo.getOne(id);
+            if (gv == null) {
+                request.setAttribute("error", "Không tìm thấy giảng viên!");
+                hienThiTatCa(request, response);
+                return;
+            }
+
+            gv.setTen(hoTen);
+            gv.setTuoi(tuoi);
+            gv.setQueQuan(queQuan);
+            gv.setGioiTinh(gioiTinh);
+
+            giangVienRepo.update(gv);
+            response.sendRedirect("/giang-vien/hien-thi-tat-ca");
+        } catch (Exception e) {
+            request.setAttribute("error", "Lỗi khi cập nhật giảng viên: " + e.getMessage());
+            request.getRequestDispatcher("/update-giang-vien.jsp").forward(request, response);
+        }
+    }
+
+    private Long parseLong(String value) {
+        try {
+            return (value != null && !value.isEmpty()) ? Long.parseLong(value) : null;
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
 }
